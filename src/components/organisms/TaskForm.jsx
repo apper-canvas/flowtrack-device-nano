@@ -5,14 +5,14 @@ import Input from "@/components/atoms/Input"
 import Select from "@/components/atoms/Select"
 import Textarea from "@/components/atoms/Textarea"
 import ApperIcon from "@/components/ApperIcon"
-
+import ApperFileFieldComponent from "@/components/atoms/FileUploader"
 const TaskForm = ({ onAddTask }) => {
-  const [title, setTitle] = useState("")
+const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [priority, setPriority] = useState("medium")
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-
+  const [uploadedFiles, setUploadedFiles] = useState([])
   const validateForm = () => {
     const newErrors = {}
     
@@ -23,7 +23,7 @@ const TaskForm = ({ onAddTask }) => {
     return newErrors
   }
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault()
     
     const formErrors = validateForm()
@@ -34,12 +34,17 @@ const TaskForm = ({ onAddTask }) => {
     setIsSubmitting(true)
     
     try {
-await onAddTask({
+      // Get files from file uploader
+      const { ApperFileUploader } = window.ApperSDK;
+      const files = await ApperFileUploader.FileField.getFiles('task_file_c');
+      
+      await onAddTask({
         title_c: title.trim(),
         description_c: description.trim(),
         priority_c: priority,
         status_c: "active",
-        completed_at_c: null
+        completed_at_c: null,
+        task_file_c: files || uploadedFiles
       })
       
       // Reset form
@@ -47,6 +52,12 @@ await onAddTask({
       setDescription("")
       setPriority("medium")
       setErrors({})
+      setUploadedFiles([])
+      
+      // Clear file uploader
+      if (window.ApperSDK && window.ApperSDK.ApperFileUploader) {
+        ApperFileUploader.FileField.clearField('task_file_c');
+      }
     } catch (error) {
       console.error("Error adding task:", error)
     } finally {
@@ -89,7 +100,7 @@ await onAddTask({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+<form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-slate-700">
               Task Title <span className="text-error-500">*</span>
@@ -147,6 +158,26 @@ await onAddTask({
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Attachments
+            </label>
+            <div className="border border-slate-200 rounded-lg p-4">
+              <ApperFileFieldComponent
+                elementId="task_file_c"
+                config={{
+                  fieldKey: 'task_file_c',
+                  fieldName: 'task_file_c',
+                  tableName: 'task_c',
+                  apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+                  apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY,
+                  existingFiles: uploadedFiles,
+                  fileCount: uploadedFiles.length
+                }}
+              />
+            </div>
+          </div>
+
           <div className="flex justify-end pt-4">
             <Button
               type="submit"
@@ -166,7 +197,7 @@ await onAddTask({
                 </div>
               )}
             </Button>
-          </div>
+</div>
         </form>
       </div>
     </motion.div>

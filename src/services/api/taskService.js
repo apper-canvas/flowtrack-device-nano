@@ -1,5 +1,6 @@
 import { getApperClient } from "@/services/apperClient";
 import { toast } from "react-toastify";
+import { fileService } from "@/services/api/fileService";
 import React from "react";
 
 export const taskService = {
@@ -78,7 +79,7 @@ export const taskService = {
     }
   },
 
-  async create(taskData) {
+async create(taskData) {
     try {
       const apperClient = getApperClient();
       if (!apperClient) {
@@ -121,7 +122,20 @@ export const taskService = {
         }
         
         if (successful.length > 0) {
-          return successful[0].data;
+          const newTask = successful[0].data;
+          
+          // If files were attached, create file records
+          if (taskData.task_file_c && taskData.task_file_c.length > 0) {
+            try {
+              await fileService.create(taskData, newTask.Id);
+            } catch (fileError) {
+              console.error("Error creating file records:", fileError);
+              // Don't fail the task creation if file creation fails
+              toast.error("Task created but failed to save files");
+            }
+          }
+          
+          return newTask;
         }
       }
       return null;
